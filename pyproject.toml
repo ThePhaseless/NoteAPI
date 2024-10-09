@@ -11,8 +11,46 @@ python = "^3.12"
 fastapi = { extras = ["standard"], version = "^0.115.0" }
 uuid = "^1.30"
 websockets = "^13.1"
-
+ruff = "^0.6.9"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+unsafe-fixes = true
+
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D103", "FA102", "D", "ANN204", "DTZ005"]
+fixable = ["ALL"]
