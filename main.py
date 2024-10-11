@@ -13,7 +13,8 @@ from models import (
     PlayerChoice,
 )
 
-app = FastAPI()
+app = FastAPI(servers=[{"url": "http://localhost:8000"},
+              {"url": "https://api.nerine.dev"}])
 
 players: dict[Player] = []
 games: dict[Game] = []
@@ -49,8 +50,13 @@ async def create_game(user: Annotated[str, Cookie()]) -> Game:
     return new_game
 
 
+@app.get("/games")
+async def get_games() -> list[Game]:
+    return games
+
+
 @app.get("/game/{game_id}", responses={404: {"description": "Game not found"}})
-async def get_game(game_id: UUID, response: Response) -> Game:
+async def get_game(response: Response, game_id: UUID) -> Game:
     try:
         game = next(game for game in games if game.id == game_id)
     except StopIteration as e:
@@ -60,7 +66,7 @@ async def get_game(game_id: UUID, response: Response) -> Game:
     return game
 
 
-@app.get("/player/{player_id}", responses={404: {"description": "Player not found"}})
+@app.get("/player/{player_name}", responses={404: {"description": "Player not found"}})
 async def get_player(player_name: str, response: Response) -> Player:
     try:
         player = next(
@@ -73,7 +79,7 @@ async def get_player(player_name: str, response: Response) -> Player:
     return player
 
 
-@app.get("/player/{player_id}/games")
+@app.get("/player/{player_name}/games")
 async def get_player_games(player_name: str) -> list[Game]:
     return [game for game in games if game.creator == player_name]
 
@@ -105,11 +111,11 @@ manager = ConnectionManager()
 async def game_ws(
     websocket: WebSocket,
     game_id: UUID,
-    player_id: str,
+    player_name: str,
 ) -> None:
     await websocket.accept()
     try:
-        player: Player = await get_player(player_id)
+        player: Player = await get_player(player_name)
     except NoPlayerFoundError:
         await websocket.close(reason="Player not found")
         return
