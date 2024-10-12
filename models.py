@@ -1,61 +1,19 @@
-
-
 import uuid
 from datetime import datetime
-from enum import Enum
-from uuid import UUID
+from typing import Annotated
 
-from pydantic import BaseModel
-
-
-class NoPlayerFoundError(Exception):
-    pass
+from pydantic import BaseModel, Field
 
 
-class NoGameFoundError(Exception):
-    pass
-
-
-class PlayerChoice(Enum):
-    ROCK = 1
-    PAPER = 2
-    SCISSORS = 3
-
-
-class HealthyResponse(BaseModel):
-    message: str = "Healthy"
-
-
-class Player(BaseModel):
-    creation_time: datetime = datetime.now()
+class NoteOut(BaseModel):
+    id: Annotated[uuid.UUID, Field(default_factory=uuid.uuid4)] = Field(
+        default_factory=uuid.uuid4)
+    created_at: Annotated[datetime, Field(default_factory=datetime.now)] = Field(
+        default_factory=datetime.now)
     name: str
-    wins: int = 0
-    current_game_id: UUID | None = None
+    note: str
+    is_encrypted: bool
 
 
-class Game(BaseModel):
-    id: UUID = uuid.uuid4()
-    start_time: datetime = datetime.now()
-    end_time: datetime | None = None
-    winner: Player | None = None
-    creator: Player
-    players: dict[Player, PlayerChoice] = {}
-
-
-class PlayerJoined(BaseModel):
-    player_name: str
-
-
-class GameRound(BaseModel):
-    round_number: int
-    enemy_choice: PlayerChoice
-    own_choice: PlayerChoice
-
-
-class GameStart(BaseModel):
-    timer: int
-    rounds: int
-
-
-class GameEnd(BaseModel):
-    winner_id: UUID
+class Note(NoteOut):
+    password: str | None
