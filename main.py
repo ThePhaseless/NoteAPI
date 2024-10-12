@@ -28,8 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if __name__ == "__main__":
-    uvicorn.run(app=app, host="0.0.0.0", port=8000)  # noqa: S104
+
 
 
 @app.get("/", response_description="Redirects to /docs")
@@ -58,3 +57,6 @@ async def create_note(name: str, note: str, password: str | None = None) -> Note
 @app.get("/note/{note_id}")
 async def get_note(note: Annotated[Note, Depends(valid_note)]) -> Note:
     return note
+
+if __name__ == "__main__":
+    uvicorn.run(app=app, host="0.0.0.0", port=8000)  # noqa: S104

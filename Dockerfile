@@ -19,4 +19,6 @@ RUN apt update && apt install -y pipx
 RUN pipx install poetry
 COPY *.toml ./
 RUN poetry install
+COPY . .
+
 CMD [ "poetry", "run", "python", "main.py" ]
