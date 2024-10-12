@@ -49,6 +49,11 @@ async def login(google_token: str, response: Response) -> User:
     return user
 
 
+@app.get("/logout")
+async def logout(response: Response) -> None:
+    response.delete_cookie(key="user_id")
+
+
 @app.get("/note", response_model=list[NoteOut])
 async def get_notes(user: Annotated[User, Depends(require_user)]) -> list[Note]:
     ret_notes = copy.deepcopy(notes)
