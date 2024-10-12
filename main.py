@@ -39,10 +39,10 @@ async def login(google_token: str, response: Response) -> User:
         google_token, requests.Request(), session.google_client_id)
     details = GoogleUser.model_validate(details_raw)
     try:
-        user = next(u for u in users if u.google_id == details.sub)
+        user = next(u for u in users if u.google_id == details.email)
     except StopIteration:
         user = User(
-            google_id=details.sub,
+            google_id=details.email,
         )
         users.append(user)
     response.set_cookie(key="user_id", value=str(user.id))
