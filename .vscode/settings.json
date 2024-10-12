@@ -1,4 +1,8 @@
 {
     "python.terminal.activateEnvInCurrentTerminal": true,
-    "python.analysis.typeCheckingMode": "strict"
+    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.exclude": [
+        ".venv",
+        "/usr/local/lib/python3.12"
+    ]
 }

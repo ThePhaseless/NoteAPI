@@ -1,9 +1,10 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import Cookie, HTTPException
 
-from models import Note
-from session import notes
+from models import Note, User
+from session import notes, users
 
 
 def valid_note(note_id: UUID, password: str | None = None) -> Note:
@@ -17,3 +18,12 @@ def valid_note(note_id: UUID, password: str | None = None) -> Note:
 
     else:
         return note
+
+
+def require_user(user_id: Annotated[UUID | None, Cookie()] = None) -> User:
+    try:
+        user = next(u for u in users if u.id == user_id)
+    except StopIteration as e:
+        raise HTTPException(status_code=401, detail="Invalid user") from e
+    else:
+        return user

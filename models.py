@@ -11,8 +11,32 @@ class NoteOut(BaseModel):
     created_at: Annotated[datetime, Field(default_factory=datetime.now)] = Field(
         default_factory=datetime.now)
     name: str
+    creator_id: uuid.UUID
     note: str
     is_encrypted: bool
+
+
+class GoogleUser(BaseModel):
+    iss: str
+    azp: str
+    aud: str
+    sub: str
+    email: str
+    email_verified: bool
+    nbf: int
+    name: str
+    picture: str
+    given_name: str
+    family_name: str
+    iat: int
+    exp: int
+    jti: str
+
+
+class User(BaseModel):
+    id: Annotated[uuid.UUID, Field(default_factory=uuid.uuid4)] = Field(
+        default_factory=uuid.uuid4)
+    google_id: str
 
 
 class Note(NoteOut):
