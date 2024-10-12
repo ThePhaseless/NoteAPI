@@ -17,7 +17,6 @@ class NoteOut(BaseModel):
 
 
 class GoogleUser(BaseModel):
-    sub: str
     email: str
     email_verified: bool
     name: str
