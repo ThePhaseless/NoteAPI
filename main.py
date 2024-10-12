@@ -28,8 +28,6 @@ app.add_middleware(
 )
 
 
-
-
 @app.get("/", response_description="Redirects to /docs")
 async def docs_redirect() -> responses.RedirectResponse:
     return responses.RedirectResponse(url="/docs")
