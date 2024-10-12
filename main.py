@@ -58,12 +58,14 @@ async def logout(response: Response) -> None:
 async def get_notes(user: Annotated[User, Depends(require_user)]) -> list[Note]:
     ret_notes = copy.deepcopy(notes)
     # Rewrite password if enctrypted
-    for note in ret_notes:
-        if note.creator_id != user.id:
-            ret_notes.remove(note)
+
+    def hide_password(note: Note) -> Note:
         if note.is_encrypted:
             note.note = "encrypted"
-    return ret_notes
+        return note
+
+    map(hide_password, ret_notes)
+    return [note for note in ret_notes if note.creator_id == user.id]
 
 
 @app.post("/note", response_model=NoteOut)
