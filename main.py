@@ -20,7 +20,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://notes.nerine.dev"],
+    allow_origins=["https://notes.nerine.dev", "https://myapi.nerine.dev"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
