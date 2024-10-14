@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, Response, responses
 from google.auth.transport import requests
 from google.oauth2 import id_token
+from starlette.middleware.cors import CORSMiddleware
 
 import session
 from dependencies import require_user, valid_note
@@ -16,6 +17,14 @@ app = FastAPI(
     servers=[
         {"url": "https://myapi.nerine.dev"},
     ],
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://notes.nerine.dev", "https://myapi.nerine.dev"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
