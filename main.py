@@ -15,14 +15,15 @@ from session import notes, users
 
 app = FastAPI(
     servers=[
-        {"url": "https://api.nerine.dev"},
-        {"url": "http://localhost:8000"},
+        {"url": "https://myapi.nerine.dev"},
     ],
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://notes.nerine.dev"],
     allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
