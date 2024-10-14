@@ -22,9 +22,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://notes.nerine.dev",
-        "http://localhost:4200",
-        "http://localhost",
+        # "https://notes.nerine.dev",
+        # "http://localhost:4200",
+        # "http://localhost",
+        "*",
     ],
     allow_headers=["*"],
     allow_credentials=True,
@@ -55,7 +56,7 @@ async def login(google_token: str, response: Response) -> User:
         )
         users.append(user)
 
-    response.set_cookie(key="user_id", value=str(user.id), samesite="none")
+    response.set_cookie(key="user_id", value=str(user.id))
     return user
 
 
@@ -74,7 +75,7 @@ async def get_notes(user: Annotated[User, Depends(require_user)]) -> list[Note]:
             note.note = "encrypted"
         return note
 
-    map(hide_password, ret_notes)
+    ret_notes = list(map(hide_password, ret_notes))
     return [note for note in ret_notes if note.creator_id == user.id]
 
 
@@ -85,11 +86,12 @@ async def create_note(
         user: Annotated[User, Depends(require_user)],
         password: str | None = None,
 ) -> Note:
+    is_encrypted = password is not None and password != ""
     new_note = Note(
         note=note,
         password=password,
         name=name,
-        is_encrypted=password is not None and password != "",
+        is_encrypted=is_encrypted,
         creator_id=user.id,
     )
     notes.append(new_note)
