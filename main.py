@@ -22,10 +22,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        # "https://notes.nerine.dev",
-        # "http://localhost:4200",
-        # "http://localhost",
-        "*",
+        "https://notes.nerine.dev",
+        "http://localhost:4200",
+        "http://localhost",
     ],
     allow_headers=["*"],
     allow_credentials=True,
