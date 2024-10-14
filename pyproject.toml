@@ -14,6 +14,7 @@ websockets = "^13.1"
 ruff = "^0.6.9"
 google-auth = "^2.35.0"
 requests = "^2.32.3"
+python-multipart = "^0.0.12"
 
 [build-system]
 requires = ["poetry-core"]

@@ -20,7 +20,7 @@ def valid_note(note_id: UUID, password: str | None = None) -> Note:
         return note
 
 
-def require_user(user_id: Annotated[UUID | None, Cookie()] = None) -> User:
+def require_user(user_id: Annotated[UUID, Cookie()]) -> User:
     try:
         user = next(u for u in users if u.id == user_id)
     except StopIteration as e:

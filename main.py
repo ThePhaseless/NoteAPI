@@ -4,10 +4,9 @@ from typing import Annotated
 
 import uvicorn
 from fastapi import Depends, FastAPI, Response, responses
-from fastapi.middleware import Middleware
+from fastapi.middleware.cors import CORSMiddleware
 from google.auth.transport import requests
 from google.oauth2 import id_token
-from starlette.middleware.cors import CORSMiddleware
 
 import session
 from dependencies import require_user, valid_note
@@ -18,16 +17,24 @@ app = FastAPI(
     servers=[
         {"url": "https://myapi.nerine.dev"},
     ],
-    middleware=[
-        Middleware(
-            CORSMiddleware,
-            allow_origins=["https://notes.nerine.dev",
-                           "https://myapi.nerine.dev"],
-            allow_methods=["POST", "GET"],
-            allow_headers=["Content-Type", "Set-Cookie"],
-        ),
-    ],
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://notes.nerine.dev",
+        "http://localhost:4200",
+        "http://localhost",
+    ],
+    allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+)
+
+
+@app.get("/ping")
+async def ping() -> str:
+    return "pong"
 
 
 @app.get("/", response_description="Redirects to /docs")
@@ -47,7 +54,8 @@ async def login(google_token: str, response: Response) -> User:
             google_id=details.sub,
         )
         users.append(user)
-    response.set_cookie(key="user_id", value=str(user.id))
+
+    response.set_cookie(key="user_id", value=str(user.id), samesite="none")
     return user
 
 
@@ -91,6 +99,7 @@ async def create_note(
 @app.get("/note/{note_id}")
 async def get_note(note: Annotated[Note, Depends(valid_note)]) -> Note:
     return note
+
 
 if __name__ == "__main__":
     uvicorn.run(app=app, host="0.0.0.0", port=8000)  # noqa: S104
