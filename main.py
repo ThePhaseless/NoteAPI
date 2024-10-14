@@ -24,8 +24,8 @@ app = FastAPI(
             allow_origins=["https://notes.nerine.dev",
                            "https://myapi.nerine.dev"],
             allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_methods=["POST", "GET"],
+            allow_headers=["Content-Type", "Set-Cookie"],
         ),
     ],
 )
