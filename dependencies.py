@@ -1,29 +1,57 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Cookie, HTTPException
+from fastapi import Cookie, Depends, HTTPException
+from sqlmodel import Session, select
 
+from lib import is_admin
 from models import Note, User
-from session import notes, users
+from session import get_session
 
 
-def valid_note(note_id: UUID, password: str | None = None) -> Note:
-    try:
-        note = next(n for n in notes if n.id == note_id)
-        if password is not None and note.password != password:
-            raise HTTPException(status_code=401, detail="Invalid password")
+def require_user(session: Annotated[Session, Depends(get_session)], user_id: Annotated[UUID | None, Cookie()] = None) -> User:
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="User required")
 
-    except StopIteration as e:
-        raise HTTPException(status_code=404, detail="Note not found") from e
+    user = session.exec(select(User).where(
+        User.id == user_id,
+    )).first()
 
-    else:
+    if user is None or user.id is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def valid_note(
+    user: Annotated[User, Depends(require_user)],
+    session: Annotated[Session, Depends(get_session)],
+    note_id: UUID,
+    password: str | None = None,
+) -> Note:
+    note = session.exec(select(Note).where(
+        Note.id == note_id,
+    )).first()
+
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    if is_admin(user):
         return note
 
+    if note.creator_id != user.id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-def require_user(user_id: Annotated[UUID | None, Cookie()] = None) -> User:
-    try:
-        user = next(u for u in users if u.id == user_id)
-    except StopIteration as e:
-        raise HTTPException(status_code=401, detail="Invalid user") from e
-    else:
-        return user
+    if note.is_encrypted:
+        if password is None:
+            raise HTTPException(status_code=401, detail="Password required")
+        if note.password != password:
+            raise HTTPException(status_code=401, detail="Wrong password")
+    elif password is not None:
+        raise HTTPException(status_code=401, detail="Password not required")
+    return note
+
+
+def require_admin(user: Annotated[User, Depends(require_user)]) -> User:
+    if is_admin(user):
+        raise HTTPException(status_code=401, detail="Not admin")
+    return user

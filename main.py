@@ -1,17 +1,18 @@
 
-import copy
 from typing import Annotated
+from uuid import UUID
 
 import uvicorn
-from fastapi import Depends, FastAPI, Response, responses
+from fastapi import Depends, FastAPI, HTTPException, Response, responses
 from fastapi.middleware.cors import CORSMiddleware
 from google.auth.transport import requests
 from google.oauth2 import id_token
+from sqlmodel import Session, select
 
-import session
 from dependencies import require_user, valid_note
-from models import GoogleUser, Note, NoteOut, User
-from session import notes, users
+from lib import is_admin, is_password_encrypted
+from models import GoogleUser, Note, NoteInput, User
+from session import get_session
 
 app = FastAPI(
     servers=[
@@ -43,17 +44,23 @@ async def docs_redirect() -> responses.RedirectResponse:
 
 
 @app.get("/login")
-async def login(google_token: str, response: Response) -> User:
+async def login(google_token: str, response: Response, session: Annotated[Session, Depends(get_session)]) -> User:
     details_raw: dict = id_token.verify_oauth2_token(  # type: ignore
-        google_token, requests.Request(), session.google_client_id)
+        google_token, requests.Request(),
+    )
     details = GoogleUser.model_validate(details_raw)
-    try:
-        user = next(u for u in users if u.google_id == details.sub)
-    except StopIteration:
+
+    user = session.exec(select(User).where(
+        User.google_id == details.sub,
+    )).first()
+
+    if user is None:
         user = User(
             google_id=details.sub,
+            email=details.email,
         )
-        users.append(user)
+        session.add(user)
+        session.commit()
 
     response.set_cookie(key="user_id", value=str(user.id))
     return user
@@ -64,42 +71,84 @@ async def logout(response: Response) -> None:
     response.delete_cookie(key="user_id")
 
 
-@app.get("/note", response_model=list[NoteOut])
-async def get_notes(user: Annotated[User, Depends(require_user)]) -> list[Note]:
-    ret_notes = copy.deepcopy(notes)
-    # Rewrite password if enctrypted
+@app.get("/notes", response_model=list[Note])
+async def get_user_notes(
+    user: Annotated[User, Depends(require_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[Note]:
+    notes = session.exec(select(Note).where(
+        Note.creator_id == user.id)).all()
+
+    if (is_admin(user)):
+        return list(notes)
 
     def hide_password(note: Note) -> Note:
         if note.is_encrypted:
             note.note = "encrypted"
         return note
 
-    ret_notes = list(map(hide_password, ret_notes))
-    return [note for note in ret_notes if note.creator_id == user.id]
+    return list(map(hide_password, notes))
 
 
-@app.post("/note", response_model=NoteOut)
+@app.post("/note", response_model=Note)
 async def create_note(
-        name: str,
-        note: str,
+        session: Annotated[Session, Depends(get_session)],
+        note: NoteInput,
+
         user: Annotated[User, Depends(require_user)],
-        password: str | None = None,
 ) -> Note:
-    is_encrypted = password is not None and password != ""
+    if user.id is None:
+        raise HTTPException(status_code=401, detail="User required")
     new_note = Note(
-        note=note,
-        password=password,
-        name=name,
-        is_encrypted=is_encrypted,
+        note=note.note,
+        password=note.password,
+        name=note.name,
+        is_encrypted=is_password_encrypted(note.password),
         creator_id=user.id,
     )
-    notes.append(new_note)
+    session.add(new_note)
+    session.commit()
     return new_note
 
 
-@app.get("/note/{note_id}")
+@app.get("/notes/all", dependencies=[Depends(require_user)], response_model=list[Note])
+async def get_all_notes(session: Annotated[Session, Depends(get_session)]) -> list[Note]:
+    return list(session.exec(select(Note)).all())
+
+
+@ app.get("/note/{note_id}")
 async def get_note(note: Annotated[Note, Depends(valid_note)]) -> Note:
     return note
+
+
+@app.put("/note/{note_id}")
+async def update_note(
+        session: Annotated[Session, Depends(get_session)],
+        note_id: UUID,
+        note: NoteInput,
+) -> Note:
+    new_note = session.get(Note, note_id)
+    if new_note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    new_note.name = note.name
+    new_note.note = note.note
+    new_note.password = note.password
+    new_note.is_encrypted = is_password_encrypted(note.password)
+    session.add(note)
+    session.commit()
+    return new_note
+
+
+@app.delete("/note/{note_id}")
+async def delete_note(
+        session: Annotated[Session, Depends(get_session)],
+        user: Annotated[User, Depends(require_user)],
+        note: Annotated[Note, Depends(valid_note)],
+) -> None:
+    if note.creator_id != user.id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session.delete(note)
+    session.commit()
 
 
 if __name__ == "__main__":

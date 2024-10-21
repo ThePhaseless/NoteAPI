@@ -2,21 +2,32 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from sqlmodel import Field, Relationship, SQLModel  # type: ignore
 
 
-class NoteOut(BaseModel):
-    id: Annotated[uuid.UUID, Field(default_factory=uuid.uuid4)] = Field(
-        default_factory=uuid.uuid4)
+class User(SQLModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    notes: list["Note"] = Relationship(back_populates="creator")
+    email: str = Field(unique=True)
+    google_id: str
+
+
+class NoteInput(SQLModel):
+    name: str
+    note: str
+    password: str | None = Field(exclude=True, default=None)
+
+
+class Note(NoteInput):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: Annotated[datetime, Field(default_factory=datetime.now)] = Field(
         default_factory=datetime.now)
-    name: str
-    creator_id: uuid.UUID
-    note: str
-    is_encrypted: bool
+    creator_id: uuid.UUID = Field(foreign_key="user.id")
+    creator: User = Relationship(back_populates="notes")
+    is_encrypted: bool = Field(index=True)
 
 
-class GoogleUser(BaseModel):
+class GoogleUser(SQLModel):
     sub: str
     email: str
     email_verified: bool
@@ -24,13 +35,3 @@ class GoogleUser(BaseModel):
     picture: str
     given_name: str
     family_name: str
-
-
-class User(BaseModel):
-    id: Annotated[uuid.UUID, Field(default_factory=uuid.uuid4)] = Field(
-        default_factory=uuid.uuid4)
-    google_id: str
-
-
-class Note(NoteOut):
-    password: str | None
