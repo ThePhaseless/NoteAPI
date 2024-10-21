@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import Cookie, Depends, HTTPException
 from sqlmodel import Session, select
 
-from lib import is_admin
 from models import Note, User
 from session import get_session
 
@@ -35,7 +34,7 @@ def valid_note(
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    if is_admin(user):
+    if user.is_admin:
         return note
 
     if note.creator_id != user.id:
@@ -52,6 +51,6 @@ def valid_note(
 
 
 def require_admin(user: Annotated[User, Depends(require_user)]) -> User:
-    if is_admin(user):
+    if not user.is_admin:
         raise HTTPException(status_code=401, detail="Not admin")
     return user

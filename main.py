@@ -9,7 +9,7 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from sqlmodel import Session, select
 
-from dependencies import require_user, valid_note
+from dependencies import require_admin, require_user, valid_note
 from lib import is_admin, is_password_encrypted
 from models import GoogleUser, Note, NoteInput, User
 from session import get_session
@@ -59,6 +59,7 @@ async def login(google_token: str, response: Response, session: Annotated[Sessio
             google_id=details.sub,
             email=details.email,
         )
+        user.is_admin = is_admin(user)
         session.add(user)
         session.commit()
 
@@ -79,7 +80,7 @@ async def get_user_notes(
     notes = session.exec(select(Note).where(
         Note.creator_id == user.id)).all()
 
-    if (is_admin(user)):
+    if (user.is_admin):
         return list(notes)
 
     def hide_password(note: Note) -> Note:
@@ -111,9 +112,12 @@ async def create_note(
     return new_note
 
 
-@app.get("/notes/all", dependencies=[Depends(require_user)], response_model=list[Note])
+@app.get("/notes/all", dependencies=[Depends(require_admin)], response_model=list[Note])
 async def get_all_notes(session: Annotated[Session, Depends(get_session)]) -> list[Note]:
-    return list(session.exec(select(Note)).all())
+    note_list = list(session.exec(select(Note)).all())
+    for note in note_list:
+        note.is_encrypted = False
+    return note_list
 
 
 @ app.get("/note/{note_id}")
@@ -145,7 +149,7 @@ async def delete_note(
         user: Annotated[User, Depends(require_user)],
         note: Annotated[Note, Depends(valid_note)],
 ) -> None:
-    if note.creator_id != user.id:
+    if note.creator_id != user.id and not user.is_admin:
         raise HTTPException(status_code=401, detail="Unauthorized")
     session.delete(note)
     session.commit()

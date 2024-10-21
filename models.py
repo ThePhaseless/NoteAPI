@@ -5,11 +5,12 @@ from typing import Annotated
 from sqlmodel import Field, Relationship, SQLModel  # type: ignore
 
 
-class User(SQLModel):
+class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     notes: list["Note"] = Relationship(back_populates="creator")
     email: str = Field(unique=True)
     google_id: str
+    is_admin: bool = Field(default=False)
 
 
 class NoteInput(SQLModel):
@@ -18,7 +19,7 @@ class NoteInput(SQLModel):
     password: str | None = Field(exclude=True, default=None)
 
 
-class Note(NoteInput):
+class Note(NoteInput, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: Annotated[datetime, Field(default_factory=datetime.now)] = Field(
         default_factory=datetime.now)
