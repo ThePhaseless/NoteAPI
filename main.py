@@ -165,12 +165,12 @@ async def get_users(session: Annotated[Session, Depends(get_session)]) -> list[U
     return list(session.exec(select(User)).all())
 
 
-@user_router.delete("/user/{user_id}")
-async def delete_user(session: Annotated[Session, Depends(get_session)], user_id: UUID) -> None:
-    user = session.get(User, user_id)
+@user_router.delete("/user/{query_user_id}")
+async def delete_user(session: Annotated[Session, Depends(get_session)], query_user_id: UUID) -> None:
+    user = session.get(User, query_user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    for note in session.exec(select(Note).where(Note.creator_id == user_id)).all():
+    for note in session.exec(select(Note).where(Note.creator_id == query_user_id)).all():
         session.delete(note)
     session.delete(user)
 
