@@ -174,5 +174,8 @@ async def delete_user(session: Annotated[Session, Depends(get_session)], query_u
         session.delete(note)
     session.delete(user)
 
+app.include_router(notes_router)
+app.include_router(user_router)
+
 if __name__ == "__main__":
     uvicorn.run(app=app, host="0.0.0.0", port=8000)  # noqa: S104
