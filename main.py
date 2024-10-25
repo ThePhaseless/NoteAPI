@@ -3,7 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Response, responses
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Response, responses
 from fastapi.middleware.cors import CORSMiddleware
 from google.auth.transport import requests
 from google.oauth2 import id_token
@@ -71,8 +71,10 @@ async def login(google_token: str, response: Response, session: Annotated[Sessio
 async def logout(response: Response) -> None:
     response.delete_cookie(key="user_id")
 
+notes_router = APIRouter(prefix="/note", tags=["note"])
 
-@app.get("/notes", response_model=list[Note])
+
+@notes_router.get("/note", response_model=list[Note])
 async def get_user_notes(
     user: Annotated[User, Depends(require_user)],
     session: Annotated[Session, Depends(get_session)],
@@ -91,7 +93,7 @@ async def get_user_notes(
     return list(map(hide_password, notes))
 
 
-@app.post("/note", response_model=Note)
+@notes_router.post("/note", response_model=Note)
 async def create_note(
         session: Annotated[Session, Depends(get_session)],
         note: NoteInput,
@@ -112,7 +114,7 @@ async def create_note(
     return new_note
 
 
-@app.get("/notes/all", dependencies=[Depends(require_admin)], response_model=list[Note])
+@notes_router.get("/note/all", dependencies=[Depends(require_admin)], response_model=list[Note])
 async def get_all_notes(session: Annotated[Session, Depends(get_session)]) -> list[Note]:
     note_list = list(session.exec(select(Note)).all())
     for note in note_list:
@@ -120,12 +122,12 @@ async def get_all_notes(session: Annotated[Session, Depends(get_session)]) -> li
     return note_list
 
 
-@ app.get("/note/{note_id}")
+@notes_router.get("/note/{note_id}")
 async def get_note(note: Annotated[Note, Depends(valid_note)]) -> Note:
     return note
 
 
-@app.put("/note/{note_id}")
+@notes_router.put("/note/{note_id}")
 async def update_note(
         session: Annotated[Session, Depends(get_session)],
         note_id: UUID,
@@ -143,7 +145,7 @@ async def update_note(
     return new_note
 
 
-@app.delete("/note/{note_id}")
+@notes_router.delete("/note/{note_id}")
 async def delete_note(
         session: Annotated[Session, Depends(get_session)],
         user: Annotated[User, Depends(require_user)],
@@ -154,6 +156,23 @@ async def delete_note(
     session.delete(note)
     session.commit()
 
+user_router = APIRouter(
+    prefix="/user", tags=["user"], dependencies=[Depends(require_admin)])
+
+
+@user_router.get("/users")
+async def get_users(session: Annotated[Session, Depends(get_session)]) -> list[User]:
+    return list(session.exec(select(User)).all())
+
+
+@user_router.delete("/user/{user_id}")
+async def delete_user(session: Annotated[Session, Depends(get_session)], user_id: UUID) -> None:
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    for note in session.exec(select(Note).where(Note.creator_id == user_id)).all():
+        session.delete(note)
+    session.delete(user)
 
 if __name__ == "__main__":
     uvicorn.run(app=app, host="0.0.0.0", port=8000)  # noqa: S104
