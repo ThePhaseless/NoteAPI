@@ -174,6 +174,7 @@ async def delete_user(session: Annotated[Session, Depends(get_session)], query_u
     for note in session.exec(select(Note).where(Note.creator_id == query_user_id)).all():
         session.delete(note)
     session.delete(user)
+    session.commit()
 
 app.include_router(notes_router)
 app.include_router(user_router)
